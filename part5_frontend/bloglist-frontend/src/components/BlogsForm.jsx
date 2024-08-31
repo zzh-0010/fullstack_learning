@@ -1,24 +1,24 @@
 import { useState } from 'react'
 import PropTypes from 'prop-types'
+import { Form, Button } from 'react-bootstrap'
 
-const BlogsForm = ( { createBlog } ) => {
-
+const BlogsForm = ({ createBlog }) => {
   const [newTitle, setTitle] = useState('')
   const [newAuthor, setAuthor] = useState('')
   const [newUrl, setUrl] = useState('')
 
   const handleTitleChange = (event) => {
-    console.log(event.target.value)
+    //console.log(event.target.value)
     setTitle(event.target.value)
   }
 
   const handleAuthorChange = (event) => {
-    console.log(event.target.value)
+    //console.log(event.target.value)
     setAuthor(event.target.value)
   }
 
   const handleUrlChange = (event) => {
-    console.log(event.target.value)
+    //console.log(event.target.value)
     setUrl(event.target.value)
   }
 
@@ -27,7 +27,7 @@ const BlogsForm = ( { createBlog } ) => {
     createBlog({
       title: newTitle,
       author: newAuthor,
-      url: newUrl
+      url: newUrl,
     })
     setTitle('')
     setAuthor('')
@@ -36,40 +36,45 @@ const BlogsForm = ( { createBlog } ) => {
 
   return (
     <div>
-      <form onSubmit={addBlog}>
-        <h2>Create New</h2>
-        <div>
-            title: <input
+      <h2>Create New</h2>
+      <Form onSubmit={addBlog}>
+        <Form.Group>
+          <Form.Label>title:{' '}</Form.Label>
+          <Form.Control
             value={newTitle}
             onChange={handleTitleChange}
-            placeholder='put title here'
-            id='title'
+            placeholder="put title here"
+            id="title"
           />
-        </div>
-        <div>
-            author: <input
+        </Form.Group>
+        <Form.Group>
+          <Form.Label>author:{' '}</Form.Label>
+          <Form.Control
             value={newAuthor}
             onChange={handleAuthorChange}
-            placeholder='put author here'
-            id='author'
+            placeholder="put author here"
+            id="author"
           />
-        </div>
-        <div>
-            url: <input
+        </Form.Group>
+        <Form.Group>
+          <Form.Label>url:{' '}</Form.Label>
+          <Form.Control
             value={newUrl}
             onChange={handleUrlChange}
-            placeholder='put url here'
-            id='url'
+            placeholder="put url here"
+            id="url"
           />
-        </div>
-        <button id='add-new-blog' type='submit'>create</button>
-      </form>
+        </Form.Group>
+        <Button variant='primary' id="add-new-blog" type="submit">
+          create
+        </Button>
+      </Form>
     </div>
   )
 }
 
 BlogsForm.propTypes = {
-  createBlog: PropTypes.func.isRequired
+  createBlog: PropTypes.func.isRequired,
 }
 
 export default BlogsForm

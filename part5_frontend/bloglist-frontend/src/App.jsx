@@ -1,176 +1,53 @@
-import { useState, useEffect, useRef } from 'react'
-import Blog from './components/Blog'
-import Togglable from './components/Togglable'
-import BlogsForm from './components/BlogsForm'
-import Notification from './components/Notification'
-import blogService from './services/blogs'
-import loginService from './services/login'
+/*
+目前App的功能非常有限，且存在很多问题，包括：
+·删除博客时无法一同将其所有的评论删去
+·还没实现通知样式根据不同类型的通知改变的功能
+·因为token过期等问题导致登陆失效后，页面没有及时刷新！
+·不存在blog或者user之类的，页面应该显示什么！现在数据库里没内容的话都无法添加内容，只能从后端添加来让前端正常显示
+·prettier的自动分段代码咋用啊，你看上面那一条那么长
+·命名混乱，单数复数的慢慢立下一个使用习惯吧，然后组件命名也很混乱，成为下一个问题的部分原因
+·组件分离逻辑混乱，甚至一个组件需要传进来一堆变量，如何改变这种情况？还是不需要改变？
+·eslint（prettier）的使用方法？后端和前端代码的通用风格完全不同惹
+·测试文件还没及时更新
+*/
 
+import { useEffect } from 'react'
+import blogService from './services/blogs'
+import { useDispatch, useSelector } from 'react-redux'
+import { setUser } from './reducers/loginReducer'
+import { initializeBlog } from './reducers/blogReducer'
+import Blogs from './components/Blogs'
+import LoginForm from './components/LoginForm'
 
 let ifError = false
 
 const App = () => {
-  const [blogs, setBlogs] = useState([])
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [user, setUser] = useState(null)
-  const [message, setMessage] = useState(null)
 
-  const blogFromRef = useRef()
-
-  const sortBlogs = (unsortedblogs) => {
-    const sortedBlogs = unsortedblogs.sort((a, b) => b.likes - a.likes)
-    setBlogs(sortedBlogs)
-  }
+  const dispatch = useDispatch()
 
   useEffect(() => {
-    const getAllBlogs = async () => {
-      const blogs = await blogService.getAll()
-      sortBlogs(blogs)
-    }
-    getAllBlogs()
-  }, [])
+    dispatch(initializeBlog())
+  }, [dispatch])
 
   //检查本地登录信息存储
   useEffect(() => {
     const loggedUserJSON = window.localStorage.getItem('loggedBlogappUser')
-    if(loggedUserJSON){
+    console.log('what is happending here',Object.keys(window.localStorage))
+    if (loggedUserJSON) {
       const user = JSON.parse(loggedUserJSON)
       blogService.setToken(user.token)
       console.log('The user now is: ', user)
-      setUser(user)
+      dispatch(setUser(user))
     }
-  }, [])
+  }, [dispatch])
 
-  const handleLogin = async (event) => {
-    event.preventDefault()
-    console.log('logging with :',username, password)
-    try{
-      const user = await loginService.login({
-        username, password
-      })
-      window.localStorage.setItem(
-        'loggedBlogappUser', JSON.stringify(user)
-      )
-      blogService.setToken(user.token)
-      setUser(user)
-      console.log('The user now is: ', user)
-      setUsername('')
-      setPassword('')
-    }
-    catch (error) {
-      ifError = true
-      setMessage('Wrong username or password')
-      setTimeout(() => {
-        setMessage(null)
-      },4000)
-    }
+  const blogs = useSelector(state => state.blogs)
+  const user = useSelector(state => state.users)
+
+  if(blogs.length === 0){
+    return <div className='container'>There is not any blog yet, wait for rendering or creat one</div>
   }
-
-  const handleLogout = (event) => {
-    console.log('Logging out:', user.name)
-    setUser(null)
-    window.localStorage.removeItem('loggedBlogappUser')
-  }
-
-  const createBlog = async (newObject) => {
-    try{
-      blogFromRef.current.toggleVisibility()
-      const response = await blogService.create(newObject)
-      console.log('blog response',response)
-      setBlogs(blogs.concat(response))
-      console.log('Created...')
-      ifError = false
-      setMessage(`Added ${response.title}`)
-    }
-    catch (error) {
-      console.log(error.message)
-    }
-    setTimeout(() => {
-      setMessage(null)
-    },4000)
-  }
-
-  const putLikes = async (id, newObject) => {
-    try {
-      const response = await blogService.update(id, newObject)
-      console.log('putlike response', response)
-      const newBlogs = blogs.map(blog => blog.id === id ? response : blog)
-      sortBlogs(newBlogs)
-    }
-    catch (error){
-      console.log(error.message)
-    }
-  }
-
-  const loginForm = () => {
-    return (
-      <form onSubmit={handleLogin}>
-        <h1>Login to application</h1>
-        <Notification message={message} ifError={ifError}/>
-        <div>
-        username
-          <input
-            type='text'
-            value={username}
-            name='Username'
-            onChange={({ target }) => setUsername(target.value)}
-            id='username'
-          />
-        </div>
-        <div>
-        password
-          <input
-            type='text'
-            value={password}
-            name='Password'
-            onChange={({ target }) => setPassword(target.value)}
-            id='password'
-          />
-        </div>
-        <button id='login-button' type='submit'>Login</button>
-      </form>
-    )
-  }
-
-  const blogsForm = () => {
-    return (
-      <div>
-        <h1>blogs</h1>
-        <Notification message={message} ifError={ifError}/>
-        {user.name} logged in <button onClick={handleLogout}>Logout</button>
-        <br />
-        <div>
-          <Togglable buttonLable="new blog" ref={blogFromRef}>
-            <BlogsForm createBlog={createBlog}/>
-          </Togglable>
-        </div>
-        {blogs.map(blog =>
-          <Blog key={blog.id} blog={blog} putLikes={putLikes} deleteBlog={deleteBlog}/>
-        )}
-      </div>
-    )
-  }
-
-  const deleteBlog = async(id) => {
-    try {
-      const response = await blogService.remove(id)
-      const newBlogs = blogs.filter(blog => blog.id === id ? '' : blog)
-      setBlogs(newBlogs)
-    }catch (error) {
-      console.log(error.message)
-    }
-  }
-
-  return (
-    <div>
-      {user === null
-        ? loginForm() :
-        <div>
-          {blogsForm()}
-        </div>}
-    </div>
-  )
+  return <div className='container'>{user === null ? <LoginForm ifError={ifError}/> : <Blogs ifError={ifError}/>}</div>
 }
 
 export default App
